@@ -14,6 +14,13 @@ import (
 	"github.com/graphaelli/kibana-elasticsearch-proxy/transport"
 )
 
+func logHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	cookies := flag.String("c", "", "cookies")
 	debug := flag.Bool("D", false, "debug")
@@ -45,7 +52,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    *addr,
-		Handler: apmhttp.Wrap(proxy),
+		Handler: apmhttp.Wrap(logHandler(proxy)),
 	}
 	log.Printf("starting on http://%s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
