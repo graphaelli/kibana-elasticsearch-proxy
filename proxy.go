@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	cookies := flag.String("c", "", "cookies")
 	debug := flag.Bool("D", false, "debug")
 	kibana := flag.String("u", "", "Kibana URL")
 	addr := flag.String("addr", "localhost:9222", "listen address")
@@ -32,8 +33,13 @@ func main() {
 	if *debug {
 		transportOptions = append(transportOptions, transport.WithDebug())
 	}
+	if *cookies != "" {
+		h := http.Header{}
+		h.Add("Cookie", *cookies)
+		transportOptions = append(transportOptions, transport.WithHeaders(h))
+	}
 
-	// dummy URL - httputil.DumpRequestOut compplains otherwise
+	// dummy URL - httputil.DumpRequestOut complains otherwise
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "proxy"})
 	proxy.Transport = transport.New(transportOptions...)
 

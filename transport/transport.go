@@ -10,6 +10,7 @@ import (
 
 type roundTripper struct {
 	url    url.URL
+	header http.Header
 	rt     http.RoundTripper
 	debug  bool
 	logger *log.Logger
@@ -25,6 +26,11 @@ func (r *roundTripper) RoundTrip(reqOrig *http.Request) (*http.Response, error) 
 	}
 	req := &reqCopy
 	req.Header.Add("kbn-xsrf", "kibana-elasticsearch-proxy")
+	for k, vs := range r.header {
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
+	}
 	req.Method = http.MethodPost
 
 	u := r.url
@@ -73,6 +79,13 @@ func New(o ...Option) http.RoundTripper {
 func WithDebug() Option {
 	return func(rt *roundTripper) {
 		rt.debug = true
+	}
+}
+
+// WithHeaders enables request header customization
+func WithHeaders(h http.Header) Option {
+	return func(rt *roundTripper) {
+		rt.header = h
 	}
 }
 

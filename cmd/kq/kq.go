@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -26,10 +27,6 @@ func main() {
 	flag.Parse()
 
 	var esConfig esv7.Config
-	if *cookies != "" {
-		esConfig.Header.Add("Cookie", *cookies)
-	}
-
 	var transportOptions []transport.Option
 	if *kibana != "" {
 		kibanaURL, err := url.Parse(*kibana)
@@ -43,6 +40,11 @@ func main() {
 			esConfig.Username = kibanaURL.User.Username()
 			esConfig.Password, _ = kibanaURL.User.Password()
 		}
+	}
+	if *cookies != "" {
+		h := http.Header{}
+		h.Add("Cookie", *cookies)
+		transportOptions = append(transportOptions, transport.WithHeaders(h))
 	}
 	if *debug {
 		transportOptions = append(transportOptions, transport.WithDebug())
