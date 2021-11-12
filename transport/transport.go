@@ -35,10 +35,10 @@ func (r *roundTripper) RoundTrip(reqOrig *http.Request) (*http.Response, error) 
 
 	u := r.url
 	req.URL = &u
-	req.URL.RawQuery = url.Values{
-		"method": []string{reqOrig.Method},
-		"path":   []string{reqOrig.URL.Path},
-	}.Encode()
+	values := url.Values{}
+	values.Set("method", reqOrig.Method)
+	values.Set("path", reqOrig.URL.RequestURI())
+	req.URL.RawQuery = values.Encode()
 
 	if r.debug {
 		if out, err := httputil.DumpRequestOut(reqOrig, false); err == nil {
