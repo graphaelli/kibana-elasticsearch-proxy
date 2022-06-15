@@ -21,22 +21,35 @@ func logHandler(handler http.Handler) http.Handler {
 	})
 }
 
+func newReverseProxy(target *url.URL, rt http.RoundTripper) *httputil.ReverseProxy {
+	// from httputil.NewSingleHostReverseProxy
+	director := func(req *http.Request) {
+		req.URL.Scheme = target.Scheme
+		req.URL.Host = target.Host
+		// sets Host header - https://github.com/golang/go/issues/7682
+		req.Host = target.Host
+		// remove default User-Agent
+		if _, ok := req.Header["User-Agent"]; !ok {
+			req.Header.Set("User-Agent", "")
+		}
+	}
+	return &httputil.ReverseProxy{Director: director, Transport: rt}
+}
+
 func main() {
 	cookies := flag.String("c", "", "cookies")
 	debug := flag.Bool("D", false, "debug")
-	kibana := flag.String("u", "", "Kibana URL")
+	kibana := flag.String("u", "http://localhost:5601", "Kibana URL")
 	addr := flag.String("addr", "localhost:9222", "listen address")
 	flag.Parse()
 
 	var transportOptions []transport.Option
-	if *kibana != "" {
-		kibanaURL, err := url.Parse(*kibana)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to parse kibana URL %q: %s", *kibana, err)
-			os.Exit(1)
-		}
-		transportOptions = append(transportOptions, transport.WithURL(kibanaURL))
+	kibanaURL, err := url.Parse(*kibana)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to parse kibana URL %q: %s", *kibana, err)
+		os.Exit(1)
 	}
+	transportOptions = append(transportOptions, transport.WithURL(kibanaURL))
 	if *debug {
 		transportOptions = append(transportOptions, transport.WithDebug())
 	}
@@ -46,10 +59,7 @@ func main() {
 		transportOptions = append(transportOptions, transport.WithHeaders(h))
 	}
 
-	// dummy URL - httputil.DumpRequestOut complains otherwise
-	proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "proxy"})
-	proxy.Transport = transport.New(transportOptions...)
-
+	proxy := newReverseProxy(kibanaURL, transport.New(transportOptions...))
 	server := http.Server{
 		Addr:    *addr,
 		Handler: apmhttp.Wrap(logHandler(proxy)),
