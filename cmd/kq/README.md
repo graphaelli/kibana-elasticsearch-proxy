@@ -45,7 +45,7 @@ go run ./cmd/kq -u http://admin:changeme@localhost:5601/ -index foo -p 6 -f hits
         {
           "range": {
             "@timestamp": {
-              "gt": "now-168h/h"
+              "gte": "2021-11-11T18:00:00.000Z"
             }
           }
         }
